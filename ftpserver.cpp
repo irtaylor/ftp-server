@@ -47,6 +47,7 @@ void signal_handler(int signum);
 int create_socket(int port);
 void ftp_session(int port, int server_socket);
 char * _get_command(int command_socket, int buffer_size);
+char * _recv_all(int command_socket);
 void _show_directory();
 
 
@@ -163,25 +164,55 @@ void ftp_session(int port, int server_socket){
         printf("Now connected with %s.\n", client_IP);
 
 
-        //char * client_handle = exchange_handle(command_socket, handle);
-        //exchange_messages(command_socket, handle, client_handle);
+        command_recv = _recv_all(command_socket);
 
-        command_recv = _get_command(command_socket, COMMAND_SIZE);
-
-        cout << "Command from " << client_IP << ": " << command_recv << endl;
-
-        /*if(strcmp(command_recv, "-g") == 0){
-            file_name = _get_command(command_socket, 100);
-            cout << "File name received: \"" << file_name << "\"" << endl;
+        if(strcmp(command_recv, "-g") == 0){
+            file_name = _recv_all(command_socket);
         }
+        else file_name[0] = '\0';
 
-        data_port = _get_command(command_socket, 100);
-        cout << "Data port: " << data_port << endl;*/
+        data_port = _recv_all(command_socket);
+
+
+        cout << "Received commands from " << client_IP << ":" << endl;
+        cout << "Command: " << command_recv << endl;
+        cout << "File name: " << file_name << endl;
+        cout << "Data port: " << data_port << endl;
 
         close(command_socket);
 
     }
 }
+
+/**
+ * FUNCTION:    _recv_all()
+ * receives:    the command_socket
+ * returns:     the received message
+ * purpose:     read from a socket
+ **/
+char * _recv_all(int command_socket){
+    char * msg_recv = (char *)malloc((100 + 1) * sizeof(char));
+    int n = 0;
+    unsigned short packet_length;       // Number of bytes in packet
+    unsigned short data_length;         // Number of bytes in encapsulated data
+
+    // Receive the packet length.
+    n = recv(command_socket, &packet_length, 2, 0);
+    packet_length = ntohs(packet_length);
+
+    data_length = packet_length - sizeof(packet_length);
+    printf("%d\n", data_length);
+
+    n = recv(command_socket, msg_recv, data_length, 0);
+    msg_recv[packet_length - 2] = '\0';
+
+    return msg_recv;
+}
+
+
+
+
+
 
 /**
  * FUNCTION:    _get_command()

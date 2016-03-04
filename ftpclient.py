@@ -69,10 +69,10 @@ def main():
 
     _send_msg(command_msg, command_socket)
 
-    #if command_msg == "-g":
-        #_send_msg(file_name, command_socket)
+    if command_msg == "-g":
+        _send_msg(file_name, command_socket)
 
-    #_send_msg(str(data_port), command_socket)
+    _send_msg(str(data_port), command_socket)
 
 
 
