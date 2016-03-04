@@ -140,6 +140,7 @@ void ftp_session(int port, int server_socket){
         char * command_recv; // the received command
         char * client_IP; // the IPv4 client address
         char * file_name; // file to transfer.
+        char * data_port; // the data_port for data transfers
 
         struct sockaddr_in cli_addr; // cli_addr contains address of client to connect to the server
 
@@ -174,6 +175,9 @@ void ftp_session(int port, int server_socket){
             cout << "File name received: \"" << file_name << "\"" << endl;
         }
 
+        data_port = _get_command(command_socket, 1024);
+        cout << "Data port: " << data_port << endl;
+
         close(command_socket);
 
     }
@@ -188,7 +192,7 @@ void ftp_session(int port, int server_socket){
 char * _get_command(int command_socket, int buffer_size){
     string msg_send = "";
 
-    int n = 0;
+    int bytes_received = 0;
 
     // ALLOCATE space for the incoming command
     char * command_msg = (char *)malloc((buffer_size + 1) * sizeof(char));
@@ -197,14 +201,12 @@ char * _get_command(int command_socket, int buffer_size){
         exit(1);
     }
 
-    n = recv(command_socket, command_msg, buffer_size, 0);
+    bytes_received = recv(command_socket, command_msg, buffer_size, 0);
 
-    if (n < 0){
+    if (bytes_received < 0){
         fprintf(stderr, "ftpservr: error reading command_msg from socket.\n");
     }
-    command_msg[buffer_size] = '\0';
-
-    cout << "Command received from client: " << command_msg << endl;
+    command_msg[bytes_received] = '\0';
 
     /*if (strcmp(command_msg, "-l") != 0 && strcmp(command_msg, "-g") != 0){
         fprintf(stderr, "ftpserver: received invalid command.\n");

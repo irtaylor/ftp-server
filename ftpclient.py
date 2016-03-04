@@ -44,17 +44,26 @@ def main():
         file_name = sys.argv[4]
         data_port = int(sys.argv[5])
 
-
     # create a connection between the client and specified host on a given port
     command_socket = create_command_connection(remote_host, command_port)
 
+
+    """
+            Need to send and receive messages in useful order.
+            I'm opting to send them as follows:
+                1) Send the basic command "-l" or "-g"
+                2) if "-g", send the name of the file to transfer
+                3) send the data port that the client will use for all data transfers
+    """
     command_socket.send(command_msg)
+
 
     if command_msg == "-g":
         command_socket.send(file_name)
 
-    msg_recv = command_socket.recv(1024)
-    print "Server: " + msg_recv
+    command_socket.send(str(data_port))
+
+
 
     command_socket.close()
 
