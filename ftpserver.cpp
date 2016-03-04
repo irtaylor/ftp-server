@@ -46,7 +46,8 @@ using std::string;
 void signal_handler(int signum);
 int create_socket(int port);
 void ftp_session(int port, int server_socket);
-void _get_command(int command_socket);
+char * _get_command(int command_socket, int buffer_size);
+void _show_directory();
 
 
 
@@ -126,10 +127,19 @@ int create_socket(int port){
  * returns:     nothin.
  * purpose:     accept a connection from a client through the command port, and accept ftp commands. if the client or server close the connection, the server will resume listening on the port for a new connection until a SIGINT is received.
  **/
+#ifndef COMMAND_SIZE
+#define COMMAND_SIZE 2
+#endif
 void ftp_session(int port, int server_socket){
 
     while (true){
         printf("Now listening on port %d...\n", port);
+
+
+        int command_socket, data_socket; // one socket to transfer commands, one to transfer data
+        char * command_recv; // the received command
+        char * client_IP; // the IPv4 client address
+        char * file_name; // file to transfer.
 
         struct sockaddr_in cli_addr; // cli_addr contains address of client to connect to the server
 
@@ -138,72 +148,82 @@ void ftp_session(int port, int server_socket){
         socklen_t clilen = sizeof(cli_addr);
 
         // create the socket on which to accept connections
-        int new_server_socket = accept(server_socket, (struct sockaddr *) &cli_addr, &clilen);
+        command_socket = accept(server_socket, (struct sockaddr *) &cli_addr, &clilen);
 
-        if (new_server_socket < 0){
-            fprintf(stderr, "chatserve: error on accept().\n");
+
+        if (command_socket < 0){
+            fprintf(stderr, "ftpserver: error on accept().\n");
             exit(1);
         }
-        else{
-            // if connection goes through, print the IP of the connected client.
-            // Source: http://linux.die.net/man/3/inet_ntoa
-            printf("Now connected with %s.\n", inet_ntoa(cli_addr.sin_addr));
+
+        // if connection goes through, print the IP of the connected client.
+        // Source: http://linux.die.net/man/3/inet_ntoa
+        client_IP = inet_ntoa(cli_addr.sin_addr);
+        printf("Now connected with %s.\n", client_IP);
+
+
+        //char * client_handle = exchange_handle(command_socket, handle);
+        //exchange_messages(command_socket, handle, client_handle);
+
+        command_recv = _get_command(command_socket, COMMAND_SIZE);
+
+        cout << "Command from " << client_IP << ": " << command_recv << endl;
+
+        if(strcmp(command_recv, "-g") == 0){
+            file_name = _get_command(command_socket, 1024);
+            cout << "File name received: \"" << file_name << "\"" << endl;
         }
 
-        //char * client_handle = exchange_handle(new_server_socket, handle);
-        //exchange_messages(new_server_socket, handle, client_handle);
-
-        _get_command(new_server_socket);
-
-        close(new_server_socket);
+        close(command_socket);
 
     }
 }
 
 /**
- * FUNCTION:    get_command()
+ * FUNCTION:    _get_command()
  * receives:    the command_socket
  * returns:     nothin.
  * purpose:     read a command sent from the client and respond appropriately
  **/
- #ifndef COMMAND_SIZE
- #define COMMAND_SIZE 2
- #endif
-void _get_command(int command_socket){
+char * _get_command(int command_socket, int buffer_size){
     string msg_send = "";
 
     int n = 0;
 
     // ALLOCATE space for the incoming command
-    char * command_msg = (char *)malloc((COMMAND_SIZE + 1) * sizeof(char));
+    char * command_msg = (char *)malloc((buffer_size + 1) * sizeof(char));
     if (!command_msg){
         fprintf(stderr, "ftpserver: allocation of command_msg failed.\n");
         exit(1);
     }
 
-    n = recv(command_socket, command_msg, COMMAND_SIZE, 0);
+    n = recv(command_socket, command_msg, buffer_size, 0);
 
     if (n < 0){
         fprintf(stderr, "ftpservr: error reading command_msg from socket.\n");
     }
-    command_msg[COMMAND_SIZE] = '\0';
+    command_msg[buffer_size] = '\0';
 
-    cout << "Client: " << command_msg << endl;
+    cout << "Command received from client: " << command_msg << endl;
 
-    /*print "Command Received: " + command_msg
+    /*if (strcmp(command_msg, "-l") != 0 && strcmp(command_msg, "-g") != 0){
+        fprintf(stderr, "ftpserver: received invalid command.\n");
+    }*/
 
-    if (command_msg != "-l") and (command_msg != "-g"):
-       print "ERROR: Received invalid command.\n"
-       msg_send = "ERROR: Received invalid command.\nAccepted Commands: < -l | -g >\n"
-
-    elif (command_msg == "-l"):
-           msg_send = list_files()
-
-
-    command_socket.send(msg_send)*/
+    return command_msg;
 
 }
 
+/**
+ * FUNCTION:    _show_directory()
+ * receives:    nothin...
+ * returns:     nothin.
+ * purpose:     show the ftp server's directory contents.
+ **/
+void _show_directory(){
+    cout << "Sending directory to client..." << endl;
+
+}
 
 /**
  * FUNCTION:    signal_handler()

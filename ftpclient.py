@@ -50,6 +50,9 @@ def main():
 
     command_socket.send(command_msg)
 
+    if command_msg == "-g":
+        command_socket.send(file_name)
+
     msg_recv = command_socket.recv(1024)
     print "Server: " + msg_recv
 
