@@ -170,13 +170,13 @@ void ftp_session(int port, int server_socket){
 
         cout << "Command from " << client_IP << ": " << command_recv << endl;
 
-        if(strcmp(command_recv, "-g") == 0){
-            file_name = _get_command(command_socket, 1024);
+        /*if(strcmp(command_recv, "-g") == 0){
+            file_name = _get_command(command_socket, 100);
             cout << "File name received: \"" << file_name << "\"" << endl;
         }
 
-        data_port = _get_command(command_socket, 1024);
-        cout << "Data port: " << data_port << endl;
+        data_port = _get_command(command_socket, 100);
+        cout << "Data port: " << data_port << endl;*/
 
         close(command_socket);
 
@@ -190,7 +190,6 @@ void ftp_session(int port, int server_socket){
  * purpose:     read a command sent from the client and respond appropriately
  **/
 char * _get_command(int command_socket, int buffer_size){
-    string msg_send = "";
 
     int bytes_received = 0;
 
@@ -202,11 +201,14 @@ char * _get_command(int command_socket, int buffer_size){
     }
 
     bytes_received = recv(command_socket, command_msg, buffer_size, 0);
+    cout << "BYTES: " << bytes_received << endl;
 
     if (bytes_received < 0){
         fprintf(stderr, "ftpservr: error reading command_msg from socket.\n");
     }
     command_msg[bytes_received] = '\0';
+
+    send(command_socket, "", 0, 0);
 
     /*if (strcmp(command_msg, "-l") != 0 && strcmp(command_msg, "-g") != 0){
         fprintf(stderr, "ftpserver: received invalid command.\n");

@@ -17,8 +17,17 @@
 
 """ IMPORTS """
 import sys
-import socket
 import signal
+from socket import (            # Sockets API
+    socket,
+    gethostbyname,
+    AF_INET,
+    SOCK_STREAM,
+    SOL_SOCKET,
+    SO_REUSEADDR
+)
+
+from struct import pack, unpack # Structured binary data
 """         """
 
 
@@ -55,19 +64,31 @@ def main():
                 2) if "-g", send the name of the file to transfer
                 3) send the data port that the client will use for all data transfers
     """
-    command_socket.send(command_msg)
 
 
-    if command_msg == "-g":
-        command_socket.send(file_name)
 
-    command_socket.send(str(data_port))
+    _send_msg(command_msg, command_socket)
+
+    #if command_msg == "-g":
+        #_send_msg(file_name, command_socket)
+
+    #_send_msg(str(data_port), command_socket)
 
 
 
     command_socket.close()
 
 
+def _send_msg(msg_send, command_socket):
+
+    # packet_length serves as a "header" to tell the receipient how big of a packet they are receiving
+    packet_length = 2 + len(msg_send)
+
+    # Build packet.
+    packet = pack(">H", packet_length)
+    packet += msg_send
+
+    command_socket.sendall(packet)
 
 
 """
@@ -78,9 +99,9 @@ def main():
 """
 def create_command_connection(remote_host, command_port):
     # initialize the client socket
-    command_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    command_socket = socket(AF_INET, SOCK_STREAM)
     command_socket.connect((remote_host, command_port))
-    print 'Now connected to ', remote_host, 'on command_port #', command_port
+    print 'Now connected to', remote_host, 'on command_port #', command_port
 
     return command_socket
 
