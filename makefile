@@ -6,3 +6,6 @@
 
 main: ftpserver.cpp
 	g++ -std=c++0x ftpserver.cpp -o ftpserver
+
+make clean:
+	rm ftpserver

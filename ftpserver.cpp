@@ -46,7 +46,7 @@ using std::string;
 void signal_handler(int signum);
 int create_socket(int port);
 void ftp_session(int port, int server_socket);
-void get_command(int command_socket);
+void _get_command(int command_socket);
 
 
 
@@ -153,7 +153,7 @@ void ftp_session(int port, int server_socket){
         //char * client_handle = exchange_handle(new_server_socket, handle);
         //exchange_messages(new_server_socket, handle, client_handle);
 
-        get_command(new_server_socket);
+        _get_command(new_server_socket);
 
         close(new_server_socket);
 
@@ -169,17 +169,27 @@ void ftp_session(int port, int server_socket){
  #ifndef COMMAND_SIZE
  #define COMMAND_SIZE 2
  #endif
-void get_command(int command_socket){
+void _get_command(int command_socket){
     string msg_send = "";
+
+    int n = 0;
 
     // ALLOCATE space for the incoming command
     char * command_msg = (char *)malloc((COMMAND_SIZE + 1) * sizeof(char));
-    if(!command_msg){
+    if (!command_msg){
         fprintf(stderr, "ftpserver: allocation of command_msg failed.\n");
         exit(1);
     }
 
-    command_msg = command_socket.recv(1024)
+    n = recv(command_socket, command_msg, COMMAND_SIZE, 0);
+
+    if (n < 0){
+        fprintf(stderr, "ftpservr: error reading command_msg from socket.\n");
+    }
+    command_msg[COMMAND_SIZE] = '\0';
+
+    cout << "Client: " << command_msg << endl;
+
     /*print "Command Received: " + command_msg
 
     if (command_msg != "-l") and (command_msg != "-g"):
