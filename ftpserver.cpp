@@ -52,6 +52,7 @@ void _show_directory();
 
 
 
+
 int main(int argc, char*argv[]){
 
     // check the number of arguments.
@@ -122,6 +123,11 @@ int create_socket(int port){
 }
 
 
+
+
+
+
+
 /**
  * FUNCTION:    ftp_session()
  * receives:    the listening port and the active server_socket
@@ -164,25 +170,31 @@ void ftp_session(int port, int server_socket){
         printf("Now connected with %s.\n", client_IP);
 
 
-        command_recv = _recv_all(command_socket);
 
+        command_recv = _recv_all(command_socket);
         if(strcmp(command_recv, "-g") == 0){
             file_name = _recv_all(command_socket);
         }
-        else file_name[0] = '\0';
-
         data_port = _recv_all(command_socket);
 
 
         cout << "Received commands from " << client_IP << ":" << endl;
         cout << "Command: " << command_recv << endl;
-        cout << "File name: " << file_name << endl;
+
+        if(strcmp(command_recv, "-g") == 0){
+            cout << "File name: " << file_name << endl;
+        }
         cout << "Data port: " << data_port << endl;
 
         close(command_socket);
 
     }
 }
+
+
+
+
+
 
 /**
  * FUNCTION:    _recv_all()
