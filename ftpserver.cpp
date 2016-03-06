@@ -210,7 +210,19 @@ void ftp_session(int port, int server_socket){
             exit(1);
         }
         cout << "Data socket connected with " << client_IP << "on port #" << data_port << "..." << endl;
-        
+
+        cout << endl << "DATA TRANSMISSION:" << endl;
+        if(strcmp(command_recv, "-l") == 0){
+            cout << client_IP << " requested directory contents..." << endl;
+            cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
+        }
+        else if(strcmp(command_recv, "-g") == 0){
+            cout << client_IP << " requested file " << file_name << "..." << endl;
+            cout << "Sending "<< file_name << " to " << client_IP << ":" << data_port << "..." << endl;
+        }
+
+
+
         close(data_socket);
         close(server_socket2);
         close(command_socket);
