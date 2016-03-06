@@ -62,11 +62,14 @@ int main(int argc, char*argv[]){
         exit(1);
     }
 
+    // install a signal handler for graceful shutdowns.
     signal(SIGINT, signal_handler);
 
+    // get the command_port and server_socket to be used on the server
     int command_port = atoi(argv[1]);
     int server_socket = create_socket(command_port);
 
+    // launch the ftp session
     ftp_session(command_port, server_socket);
 
 
@@ -86,39 +89,39 @@ int create_socket(int port){
 
     // creates new socket.
     // params: 1) address domain of socket, 2) type of socket (STREAM reads in a stream as from a file / pipe), 3) the protocol. 0 chooses TCP for stream sockets, UDP for datagram sockets
-    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
+    int new_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-    if (server_socket < 0){
+    if (new_socket < 0){
         fprintf(stderr, "ftpserver: error opening socket.\n");
         exit(1);
     }
 
     // create a structure containing an internet address:
-    struct sockaddr_in serv_addr; // serv_addr contains server address.
+    struct sockaddr_in socket_addr; // serv_addr contains server address.
 
 
     // sets all values in a buffer to zero
     // this line initializes serv_addr to zeros
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    bzero((char *) &socket_addr, sizeof(socket_addr));
 
     // set up the serv_addr struct
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_addr.s_addr = INADDR_ANY; // the IP of the machine the server is running
-    serv_addr.sin_port = htons(port); //  little-endian to big-endian
+    socket_addr.sin_family = AF_INET;
+    socket_addr.sin_addr.s_addr = INADDR_ANY; // the IP of the machine the server is running
+    socket_addr.sin_port = htons(port); //  little-endian to big-endian
 
     // binds socket to address (the address of the current host and the port number of the server
     // params: 1) socket fd, 2) address to which it is bound, 3) size of address
-    if (bind(server_socket, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0){
+    if (bind(new_socket, (struct sockaddr *) &socket_addr, sizeof(socket_addr)) < 0){
         fprintf(stderr, "ftpserver: error on binding. perhaps try a different port?\n");
         exit(1);
     }
 
     // listen on the socket for connections. 2nd param is number of connections that can be waiting
-    listen(server_socket, 5);
+    listen(new_socket, 5);
 
     //cout << "Now listening on port #" << port << "." << endl;
 
-    return server_socket;
+    return new_socket;
 
 }
 
@@ -140,7 +143,7 @@ int create_socket(int port){
 void ftp_session(int port, int server_socket){
 
     while (true){
-        printf("Now listening on port %d...\n", port);
+        cout << endl << "Server socket now listening on port " << port << "..." << endl;
 
 
         int command_socket, data_socket; // one socket to transfer commands, one to transfer data
@@ -178,13 +181,19 @@ void ftp_session(int port, int server_socket){
         data_port = _recv_all(command_socket);
 
 
-        cout << "Received commands from " << client_IP << ":" << endl;
+        cout << endl << "Received commands from " << client_IP << ":" << endl;
         cout << "Command: " << command_recv << endl;
 
         if(strcmp(command_recv, "-g") == 0){
             cout << "File name: " << file_name << endl;
         }
         cout << "Data port: " << data_port << endl;
+
+        cout << "Creating data connection..." << endl;
+        data_socket = create_socket(atoi(data_port));
+        cout << "Data socket now listening on port " << data_port << "..." <<endl;
+
+
 
         close(command_socket);
 
@@ -213,7 +222,7 @@ char * _recv_all(int command_socket){
     packet_length = ntohs(packet_length);
 
     data_length = packet_length - sizeof(packet_length);
-    printf("%d\n", data_length);
+    //printf("%d\n", data_length);
 
     n = recv(command_socket, msg_recv, data_length, 0);
     msg_recv[packet_length - 2] = '\0';
