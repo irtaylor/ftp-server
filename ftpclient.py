@@ -82,9 +82,23 @@ def main():
     data_socket = create_connection(remote_host, data_port)
     print 'Data socket connected to', remote_host, 'on port #', data_port, '...'
 
+    # run function to either get directory contents or get the requested file 
+    if command_msg == "-l":
+        _get_directory()
+    elif command_msg == "-g":
+        _get_file()
+
 
     data_socket.close()
     command_socket.close()
+
+
+
+def _get_directory():
+    return
+
+def _get_file(file_name):
+    return
 
 
 

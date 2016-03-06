@@ -35,6 +35,7 @@ using std::string;
 #include <netinet/in.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <dirent.h>
 
 
 // define the maximum message size
@@ -48,7 +49,7 @@ int create_socket(int port);
 void ftp_session(int port, int server_socket);
 char * _get_command(int command_socket, int buffer_size);
 char * _recv_all(int command_socket);
-void _show_directory();
+char ** _list_dir();
 
 
 
@@ -214,10 +215,12 @@ void ftp_session(int port, int server_socket){
         cout << endl << "DATA TRANSMISSION:" << endl;
         if(strcmp(command_recv, "-l") == 0){
             cout << client_IP << " requested directory contents..." << endl;
+            char **  file_list = _list_dir();
             cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
         }
         else if(strcmp(command_recv, "-g") == 0){
             cout << client_IP << " requested file " << file_name << "..." << endl;
+            // get and send requested file
             cout << "Sending "<< file_name << " to " << client_IP << ":" << data_port << "..." << endl;
         }
 
@@ -232,7 +235,32 @@ void ftp_session(int port, int server_socket){
 
 
 
+/**
+ * FUNCTION:    _list_dir()
+ * receives:
+ * returns:
+ * purpose:     an array of strings of the directory contents
+ * referenced from: http://stackoverflow.com/a/612176/4316660
+ **/
+char ** _list_dir(){
+    char ** dir_contents;
+    DIR *dir;             // Directory object
+    struct dirent *ent;
 
+    if ((dir = opendir ("c:\\src\\")) != NULL) {
+        /* print all the files and directories within directory */
+        while ((ent = readdir (dir)) != NULL) {
+            printf ("%s\n", ent->d_name);
+        }
+        closedir (dir);
+    }
+    else {
+        /* could not open directory */
+        perror ("");
+        return EXIT_FAILURE;
+    }
+    return dir_contents;
+}
 
 
 /**
