@@ -20,6 +20,7 @@ import sys
 import signal
 from socket import (            # Sockets API
     socket,
+    gethostname,
     gethostbyname,
     AF_INET,
     SOCK_STREAM,
@@ -53,8 +54,12 @@ def main():
         file_name = sys.argv[4]
         data_port = int(sys.argv[5])
 
-    # create a connection between the client and specified host on a given port
-    command_socket = create_command_connection(remote_host, command_port)
+    print
+
+    # create a command connection between the client and specified host on a given port.
+    # use to send / receive commands and messages.
+    command_socket = create_connection(remote_host, command_port)
+    print 'Command socket connected to', remote_host, 'on port #', command_port, '...'
 
 
     """
@@ -65,8 +70,6 @@ def main():
                 3) send the data port that the client will use for all data transfers
     """
 
-
-
     _send_msg(command_msg, command_socket)
 
     if command_msg == "-g":
@@ -75,8 +78,22 @@ def main():
     _send_msg(str(data_port), command_socket)
 
 
+    print "Creating data connection..."
+    data_socket = create_connection(remote_host, data_port)
+    print 'Data socket connected to', remote_host, 'on port #', data_port, '...'
 
+
+    data_socket.close()
     command_socket.close()
+
+
+
+def create_socket(port):
+    host = gethostname()
+    new_socket = socket(AF_INET, SOCK_STREAM)
+    new_socket.bind((host, port))
+    new_socket.listen(5)
+    return new_socket
 
 
 def _send_msg(msg_send, command_socket):
@@ -97,13 +114,12 @@ def _send_msg(msg_send, command_socket):
     returns:    the active command_socket.
     purpose:    create a command_socket and establish the connection w/ the server.
 """
-def create_command_connection(remote_host, command_port):
+def create_connection(remote_host, port):
     # initialize the client socket
-    command_socket = socket(AF_INET, SOCK_STREAM)
-    command_socket.connect((remote_host, command_port))
-    print 'Now connected to', remote_host, 'on command_port #', command_port
+    new_socket = socket(AF_INET, SOCK_STREAM)
+    new_socket.connect((remote_host, port))
 
-    return command_socket
+    return new_socket
 
 
 """

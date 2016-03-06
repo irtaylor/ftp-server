@@ -140,6 +140,10 @@ int create_socket(int port){
 #ifndef COMMAND_SIZE
 #define COMMAND_SIZE 2
 #endif
+
+#ifndef MAX_CXN_ATTEMPTS
+#define MAX_CXN_ATTEMPTS 12 // Arbitrary number of connection requests
+#endif
 void ftp_session(int port, int server_socket){
 
     while (true){
@@ -150,7 +154,11 @@ void ftp_session(int port, int server_socket){
         char * command_recv; // the received command
         char * client_IP; // the IPv4 client address
         char * file_name; // file to transfer.
-        char * data_port; // the data_port for data transfers
+        char * data_port_string; // string representation of the data_port_string for data transfers
+        int data_port; // integer representation of the data port.
+        int connection_attempts = 0;
+        int status;
+        int server_socket2;
 
         struct sockaddr_in cli_addr; // cli_addr contains address of client to connect to the server
 
@@ -163,22 +171,24 @@ void ftp_session(int port, int server_socket){
 
 
         if (command_socket < 0){
-            fprintf(stderr, "ftpserver: error on accept().\n");
+            fprintf(stderr, "ftpserver: error on command_socket accept().\n");
             exit(1);
         }
 
         // if connection goes through, print the IP of the connected client.
         // Source: http://linux.die.net/man/3/inet_ntoa
         client_IP = inet_ntoa(cli_addr.sin_addr);
-        printf("Now connected with %s.\n", client_IP);
+        cout << "Command socket connected with " << client_IP << " on port #" << port << "..." << endl;
 
-
-
+        // Get the commands from the client.
         command_recv = _recv_all(command_socket);
+
         if(strcmp(command_recv, "-g") == 0){
             file_name = _recv_all(command_socket);
         }
-        data_port = _recv_all(command_socket);
+
+        data_port_string = _recv_all(command_socket);
+        data_port = atoi(data_port_string);
 
 
         cout << endl << "Received commands from " << client_IP << ":" << endl;
@@ -189,12 +199,20 @@ void ftp_session(int port, int server_socket){
         }
         cout << "Data port: " << data_port << endl;
 
+
+        // Create the data port connection
         cout << "Creating data connection..." << endl;
-        data_socket = create_socket(atoi(data_port));
-        cout << "Data socket now listening on port " << data_port << "..." <<endl;
+        server_socket2 = create_socket(data_port);
 
-
-
+        data_socket = accept(server_socket2, (struct sockaddr *) &cli_addr, &clilen);
+        if (data_socket < 0){
+            fprintf(stderr, "ftpserver: error on data_socket accept().\n");
+            exit(1);
+        }
+        cout << "Data socket connected with " << client_IP << "on port #" << data_port << "..." << endl;
+        
+        close(data_socket);
+        close(server_socket2);
         close(command_socket);
 
     }
