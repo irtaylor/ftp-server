@@ -36,6 +36,8 @@ using std::string;
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <dirent.h>
+#include <assert.h>
+
 
 
 // define the maximum message size
@@ -141,10 +143,6 @@ int create_socket(int port){
 #ifndef COMMAND_SIZE
 #define COMMAND_SIZE 2
 #endif
-
-#ifndef MAX_CXN_ATTEMPTS
-#define MAX_CXN_ATTEMPTS 12 // Arbitrary number of connection requests
-#endif
 void ftp_session(int port, int server_socket){
 
     while (true){
@@ -157,9 +155,10 @@ void ftp_session(int port, int server_socket){
         char * file_name; // file to transfer.
         char * data_port_string; // string representation of the data_port_string for data transfers
         int data_port; // integer representation of the data port.
-        int connection_attempts = 0;
-        int status;
+        //int status;
         int server_socket2;
+
+        char ** dir_contents; // list of files in current directory;
 
         struct sockaddr_in cli_addr; // cli_addr contains address of client to connect to the server
 
@@ -212,10 +211,23 @@ void ftp_session(int port, int server_socket){
         }
         cout << "Data socket connected with " << client_IP << "on port #" << data_port << "..." << endl;
 
+
+
+        /*
+         * DATA TRANSMISSION: Based on the user command, transfer either directory contents, or the file
+         */
         cout << endl << "DATA TRANSMISSION:" << endl;
         if(strcmp(command_recv, "-l") == 0){
             cout << client_IP << " requested directory contents..." << endl;
-            char **  file_list = _list_dir();
+            dir_contents = _list_dir();
+
+            cout << "Directory Contents:" << endl;
+            for(int i = 0; dir_contents[i] != NULL; i += 1){
+                cout << dir_contents[i] << endl;
+            }
+
+
+
             cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
         }
         else if(strcmp(command_recv, "-g") == 0){
@@ -224,7 +236,8 @@ void ftp_session(int port, int server_socket){
             cout << "Sending "<< file_name << " to " << client_IP << ":" << data_port << "..." << endl;
         }
 
-
+        // FREE dir_contents
+        free(dir_contents);
 
         close(data_socket);
         close(server_socket2);
@@ -237,28 +250,49 @@ void ftp_session(int port, int server_socket){
 
 /**
  * FUNCTION:    _list_dir()
- * receives:
- * returns:
- * purpose:     an array of strings of the directory contents
- * referenced from: http://stackoverflow.com/a/612176/4316660
+ * receives:    nothin.
+ * returns:     nothin.
+ * purpose:     an array of strings of the directory contents.
+ * referenced from: http://stackoverflow.com/a/612176/4316660 and http://www.gnu.org/software/libc/manual/html_node/Directory-Entries.html
  **/
 char ** _list_dir(){
-    char ** dir_contents;
-    DIR *dir;             // Directory object
-    struct dirent *ent;
 
-    if ((dir = opendir ("c:\\src\\")) != NULL) {
-        /* print all the files and directories within directory */
-        while ((ent = readdir (dir)) != NULL) {
-            printf ("%s\n", ent->d_name);
+    char ** dir_contents = NULL;
+    int num_files = 0;
+    DIR *dir;
+    struct dirent *dir_entry;
+
+    if ((dir = opendir (".")) != NULL) {
+        // print all the files and directories within directory
+        while ((dir_entry = readdir (dir)) != NULL) {
+
+            // For the first file in the directory, allocate initial space for dir_contents.
+            // Otherwise, reallocate space for dir_contents for the next file.
+            if(dir_contents == NULL){
+                dir_contents = (char **)malloc(sizeof(char *));
+            }
+            else{
+                dir_contents = (char **)realloc(dir_contents, (num_files + 1) * sizeof(char *));
+            }
+
+            // check that the basic malloc and realloc succeeded.
+            assert(dir_contents != NULL);
+
+            // allocate space for the size of the file name to be added to dir_contents, and validate the allocation.
+            dir_contents[num_files] = (char *)malloc((strlen(dir_entry->d_name) + 1) * sizeof(char));
+            assert(dir_contents[num_files] != NULL);
+
+            dir_contents[num_files] = dir_entry->d_name;
+            num_files += 1;
         }
         closedir (dir);
     }
     else {
-        /* could not open directory */
-        perror ("");
-        return EXIT_FAILURE;
+        // could not open directory
+        fprintf(stderr, "ftpserver: failed to open directory.\n");
+        exit(1);
     }
+
     return dir_contents;
 }
 
@@ -287,9 +321,6 @@ char * _recv_all(int command_socket){
 
     return msg_recv;
 }
-
-
-
 
 
 
