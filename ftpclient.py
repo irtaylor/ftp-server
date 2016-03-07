@@ -20,6 +20,7 @@ import sys
 import signal
 import socket
 import os.path
+import time
 
 from socket import (
     socket,
@@ -65,7 +66,7 @@ def main():
     # use to send / receive commands and messages.
     command_socket = create_connection(remote_host, command_port)
     print 'Command socket connected to', remote_host, 'on port #', command_port, '...'
-
+    print "Sending commands..."
 
     """
             Need to send and receive messages in useful order.
@@ -82,6 +83,7 @@ def main():
 
     send_msg(str(data_port), command_socket)
 
+    time.sleep(2)
 
     print "Creating data connection..."
     data_socket = create_connection(remote_host, data_port)
@@ -102,7 +104,8 @@ def main():
 
 
 
-
+"""
+"""
 def get_directory(data_socket):
     num_files = recv_msg(data_socket)
 

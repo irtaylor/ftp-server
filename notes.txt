@@ -1,3 +1,0 @@
-- need to add more comments and references
-- need to handle some weird client requests (e.g. ftpclient.py 30020 test.txt 30021)
-- need to handle file overwrites, same name files, etc
