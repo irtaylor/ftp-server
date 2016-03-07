@@ -91,7 +91,7 @@ def main():
         get_directory(data_socket)
 
     elif command_msg == "-g":
-        get_file(file_name)
+        get_file(data_socket, file_name)
 
 
     print
@@ -104,13 +104,20 @@ def main():
 
 def get_directory(data_socket):
     num_files = recv_msg(data_socket)
-    
+
     for i in range(0, int(num_files)):
         next_file = recv_msg(data_socket)
         print next_file
 
 
-def get_file(file_name):
+def get_file(data_socket, file_name):
+
+    file_exists = recv_msg(data_socket)
+
+    if file_exists == "NOT FOUND":
+        print "ERROR:", file_name, "does not exist!"
+    elif file_exists == "FILE FOUND":
+        
     return
 
 

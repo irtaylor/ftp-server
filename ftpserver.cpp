@@ -59,7 +59,8 @@ int send_packet_length(int sock, unsigned int * packet_length);
 char * recv_all(int command_socket);
 
 char ** list_dir();
-void send_dir(int data_socket, char ** dir_contents);
+void send_dir(int data_socket, char ** dir_contents, int num_files);
+void send_file(int data_socket, char ** dir_contents, char * file_name, int num_files);
 
 
 
@@ -162,6 +163,7 @@ void ftp_session(int port, int server_socket){
         int server_socket2;
 
         char ** dir_contents; // list of files in current directory;
+        int num_files = 0; // number of files in directory;
 
         struct sockaddr_in cli_addr; // cli_addr contains address of client to connect to the server
 
@@ -217,19 +219,24 @@ void ftp_session(int port, int server_socket){
         // DATA TRANSMISSION: Based on the user command, transfer either directory contents, or the file //
         cout << endl << "DATA TRANSMISSION:" << endl;
 
-        // we will always need to get the directory contents //
+        // we will always need to get the directory contents and number of files//
         dir_contents = list_dir();
+        for(int i = 0; dir_contents[i] != NULL; i += 1){
+            num_files += 1;
+        }
 
+        // LIST directory contents
         if(strcmp(command_recv, "-l") == 0){
             cout << client_IP << " requested directory contents..." << endl;
             cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
-            send_dir(data_socket, dir_contents);
+            send_dir(data_socket, dir_contents, num_files);
 
         }
+        // GET and send requested file
         else if(strcmp(command_recv, "-g") == 0){
             cout << client_IP << " requested file " << file_name << "..." << endl;
-            // get and send requested file
             cout << "Sending "<< file_name << " to " << client_IP << ":" << data_port << "..." << endl;
+            send_file(data_socket, dir_contents, file_name, num_files);
         }
 
         // FREE dir_contents
@@ -242,23 +249,45 @@ void ftp_session(int port, int server_socket){
     }
 }
 
-void send_dir(int data_socket, char ** dir_contents){
-    int num_files = 0;
+void send_dir(int data_socket, char ** dir_contents, int num_files){
     char num_files_string[100];
 
-    for(int i = 0; dir_contents[i] != NULL; i += 1){
-        num_files += 1;
-    }
+
     sprintf(num_files_string,"%d",num_files);
     cout << "Number of files to send: " << num_files_string << endl;
 
-    // inform the client of the number of incoming files first! 
+    // inform the client of the number of incoming files first!
     send_msg(data_socket, num_files_string);
 
     for(int i = 0; dir_contents[i] != NULL; i += 1){
         send_msg(data_socket, dir_contents[i]);
     }
 }
+
+void send_file(int data_socket, char ** dir_contents, char * file_name, int num_files){
+    bool file_exists = false;
+    char error_msg[10] = "NOT FOUND";
+    char success_msg[11] = "FILE FOUND";
+
+    // check if the requested file exists
+    for(int i = 0; dir_contents[i] != NULL; i += 1){
+        if (strcmp(file_name, dir_contents[i]) == 0) {
+					file_exists = true;
+		}
+    }
+    if(!file_exists){
+        send_msg(data_socket, error_msg);
+    }
+    else{
+        send_msg(data_socket, success_msg);
+        // TRANSFER THE FILE //
+        
+
+    }
+
+}
+
+
 
 char * recv_all(int command_socket){
     char * msg_recv;
@@ -346,7 +375,7 @@ int sendall(int sock, char * buf, int len){
     }
 
     len = total; // return number actually sent here
-    cout << "Bytes sent: " << len << endl;
+    //cout << "Bytes sent: " << len << endl;
 
     return n==-1?-1:0; // return -1 on failure, 0 on success
 }
