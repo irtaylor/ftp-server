@@ -19,6 +19,7 @@
 import sys
 import signal
 import socket
+import os.path
 
 from socket import (
     socket,
@@ -93,7 +94,7 @@ def main():
     elif command_msg == "-g":
         get_file(data_socket, file_name)
 
-
+    print "Transfer complete. Goodbye!"
     print
     data_socket.close()
     command_socket.close()
@@ -117,7 +118,27 @@ def get_file(data_socket, file_name):
     if file_exists == "NOT FOUND":
         print "ERROR:", file_name, "does not exist!"
     elif file_exists == "FILE FOUND":
-        
+
+        # file_msg either contains an opening error, or the file's size
+        file_msg = recv_msg(data_socket)
+
+        if file_msg == "FILE ERROR":
+            print "ERROR:", file_name, "could not be opened!"
+        else:
+            file_size = int(file_msg)
+            file_contents = recv_msg(data_socket)
+
+            # write to file_name. referenced: http://www.afterhoursprogramming.com/tutorial/Python/Writing-to-Files/
+
+            # handle duplicate file name. see: https://docs.python.org/2/library/os.path.html#os.path.isfile
+            while os.path.isfile(file_name):
+                print "Sorry. Duplicate file names are not allowed here."
+                file_name = raw_input("Please enter a new file name: ")
+
+            new_file = open(file_name, "w")
+            new_file.write(file_contents)
+            new_file.close()
+
     return
 
 

@@ -42,10 +42,6 @@ using std::string;
 
 
 
-// define the maximum message size
-#ifndef MAX_SIZE
-#define MAX_SIZE 500
-#endif
 
 // PROTOTYPES //
 void signal_handler(int signum);
@@ -242,10 +238,11 @@ void ftp_session(int port, int server_socket){
         // FREE dir_contents
         free(dir_contents);
 
+        cout << "Transfer complete. Closing connection with " << client_IP << endl;
+
         close(data_socket);
         close(server_socket2);
         close(command_socket);
-
     }
 }
 
@@ -264,10 +261,20 @@ void send_dir(int data_socket, char ** dir_contents, int num_files){
     }
 }
 
+
+
+// http://www.programiz.com/c-programming/c-file-examples
 void send_file(int data_socket, char ** dir_contents, char * file_name, int num_files){
     bool file_exists = false;
     char error_msg[10] = "NOT FOUND";
+    char file_error[11] = "FILE ERROR"; // send in case the file cannot be opened
     char success_msg[11] = "FILE FOUND";
+
+    char * file_contents; // contains the file's contents
+
+    FILE * fptr; // file pointer to read file contents
+    int file_size = 0;
+    char file_size_string[100];
 
     // check if the requested file exists
     for(int i = 0; dir_contents[i] != NULL; i += 1){
@@ -281,10 +288,41 @@ void send_file(int data_socket, char ** dir_contents, char * file_name, int num_
     else{
         send_msg(data_socket, success_msg);
         // TRANSFER THE FILE //
-        
+        fptr = fopen(file_name, "r");
+			if (fptr == NULL) {
+                perror("ftpserver: error opening file\n");
+				send_msg(data_socket, file_error);
+				return;
+			}
+        /*while(!feof(fptr)){
+            fgets(file_contents, 1024, fptr);
 
+        }*/
+
+        // First Determine the file size, then inform the client
+        // Referenced from: http://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
+        fseek(fptr, 0L, SEEK_END);
+        file_size = ftell(fptr);
+        fseek(fptr, 0L, SEEK_SET);
+        sprintf(file_size_string,"%d",file_size);
+
+        cout << "File size: " << file_size_string << endl;
+        send_msg(data_socket, file_size_string);
+
+        file_contents = (char *)malloc((file_size + 1) * sizeof(char*));
+
+        if(file_contents == NULL){
+            perror("ftpserver: failed to allocate file_contents.\n");
+            exit(1);
+        }
+
+        for(int i = 0; i < file_size; i += 1){
+            file_contents[i] = getc(fptr);
+        }
+        file_contents[file_size] = '\0';
+        //cout << "File contents: " << file_contents << endl;
+        send_msg(data_socket, file_contents);
     }
-
 }
 
 
