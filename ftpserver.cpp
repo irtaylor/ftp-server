@@ -13,6 +13,7 @@
 
 /**
  * NOTE: my primary reference for writing the server AND client programs was: http://www.linuxhowtos.org/C_C++/socket.htm
+ * Also, refrenced Beej's Guide (particularly section 7.3 and 7.5).
  * Additional references for specific lines of code are listed in the code itself.
  *
  **/
@@ -246,6 +247,13 @@ void ftp_session(int port, int server_socket){
     }
 }
 
+
+/**
+ * FUNCTION:    send_dir()
+ * receives:    the data socket, the directory contents list, and the number of files to send.
+ * returns:     the newly created server_socket.
+ * purpose:     use the socket API to set up a basic socket to listen for and accept connections, and facilitate data transfer.
+ **/
 void send_dir(int data_socket, char ** dir_contents, int num_files){
     char num_files_string[100];
 
@@ -262,8 +270,13 @@ void send_dir(int data_socket, char ** dir_contents, int num_files){
 }
 
 
-
-// http://www.programiz.com/c-programming/c-file-examples
+/**
+ * FUNCTION:    send_file()
+ * receives:    the data socket, the directory contents list, the file name, and the number of files to send.
+ * returns:     nothin.
+ * purpose:     use the socket API to set up a basic socket to listen for and accept connections, and facilitate data transfer.
+ * see http://www.programiz.com/c-programming/c-file-examples
+ **/
 void send_file(int data_socket, char ** dir_contents, char * file_name, int num_files){
     bool file_exists = false;
     char error_msg[10] = "NOT FOUND";
@@ -326,7 +339,12 @@ void send_file(int data_socket, char ** dir_contents, char * file_name, int num_
 }
 
 
-
+/**
+ * FUNCTION:    recv_all()
+ * receives:    the command socket
+ * returns:     the received message
+ * purpose:     safely receive all incoming data
+ **/
 char * recv_all(int command_socket){
     char * msg_recv;
     int total = 0;                      // Bytes received
@@ -357,6 +375,12 @@ char * recv_all(int command_socket){
 
 
 
+/**
+ * FUNCTION:    send_msg()
+ * receives:    the socket, the message to send
+ * returns:     nothin.
+ * purpose:     send a message to the client, invoking a safe sending method.
+ **/
 void send_msg(int sock, char * msg){
     // Prefix each message with a 4-byte length (network byte order)
 
@@ -379,7 +403,12 @@ void send_msg(int sock, char * msg){
 
 }
 
-
+/**
+ * FUNCTION:    send_packet_length()
+ * receives:    the socket and 4-byte length of the packet.
+ * returns:     nothin.
+ * purpose:     tell the client how big of a packet they should expect to receive
+ **/
 int send_packet_length(int sock, unsigned int * packet_length){
     int total = 0;
     int bytesleft = 4;
@@ -398,7 +427,13 @@ int send_packet_length(int sock, unsigned int * packet_length){
 }
 
 
-
+/**
+ * FUNCTION:    sendall()
+ * receives:    the listening port.
+ * returns:     the newly created server_socket.
+ * purpose:     safely send all data.
+ * see http://beej.us/guide/bgnet/output/html/multipage/advanced.html#sendall
+ **/
 int sendall(int sock, char * buf, int len){
 
     int total = 0;        // how many bytes we've sent
@@ -422,7 +457,7 @@ int sendall(int sock, char * buf, int len){
 
 
 /**
- * FUNCTION:    _list_dir()
+ * FUNCTION:    list_dir()
  * receives:    nothin.
  * returns:     nothin.
  * purpose:     an array of strings of the directory contents.

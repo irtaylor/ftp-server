@@ -11,7 +11,9 @@
 """
 
 """
-    NOTE: my primary references for the client were http://www.linuxhowtos.org/C_C++/socket.htm, https://docs.python.org/2/library/socket.html, and Beej's Guide.
+    NOTE: my primary references for the client were http://www.linuxhowtos.org/C_C++/socket.htm, https://docs.python.org/2/library/socket.html, and Beej's Guide (particularly Section 7.3 and 7.5)
+
+    For the sending and receiving functions, I primarily referenced: http://stackoverflow.com/a/17668009/4316660.
 """
 
 
@@ -105,6 +107,10 @@ def main():
 
 
 """
+    FUNCTION:   get_directory()
+    receives:   the data_socket.
+    returns:    nothin.
+    purpose:    print the directory contents.
 """
 def get_directory(data_socket):
     num_files = recv_msg(data_socket)
@@ -113,7 +119,12 @@ def get_directory(data_socket):
         next_file = recv_msg(data_socket)
         print next_file
 
-
+"""
+    FUNCTION:   get_file()
+    receives:   the data_socket and desired file_name
+    returns:    nothin.
+    purpose:    receive the text contents of desired file and create a file on the client's side.
+"""
 def get_file(data_socket, file_name):
 
     file_exists = recv_msg(data_socket)
@@ -142,10 +153,14 @@ def get_file(data_socket, file_name):
             new_file.write(file_contents)
             new_file.close()
 
-    return
 
 
-
+"""
+    FUNCTION:   create_socket()
+    receives:   a port number
+    returns:    nothin.
+    purpose:    currently not used -- could create a TCP socket.
+"""
 def create_socket(port):
     host = gethostname()
     new_socket = socket(AF_INET, SOCK_STREAM)
@@ -153,19 +168,30 @@ def create_socket(port):
     new_socket.listen(5)
     return new_socket
 
-
+"""
+    FUNCTION:   send_msg())
+    receives:   the message to send and the command socket
+    returns:    nothin.
+    purpose:    send a packet to the server
+"""
 def send_msg(msg_send, command_socket):
 
     # packet_length serves as a "header" to tell the receipient how big of a packet they are receiving
     packet_length = 2 + len(msg_send)
 
-    # Build packet.
+    # Build packet. Pack the contents in network byte order (big endian)
+    # see: https://docs.python.org/2/library/struct.html
     packet = pack(">H", packet_length)
     packet += msg_send
 
     command_socket.sendall(packet)
 
-
+"""
+    FUNCTION:   recv_msg())
+    receives:   the socket to receive on
+    returns:    the results of recv_all.
+    purpose:    safely receive ALL incoming data
+"""
 def recv_msg(sock):
     # Read message length and unpack it into an integer
     raw_msglen = recv_all(sock, 4)
@@ -176,6 +202,12 @@ def recv_msg(sock):
     #Read the message data
     return recv_all(sock, (msglen - 4))
 
+"""
+    FUNCTION:   recv_all())
+    receives:   the socket and message length (n)
+    returns:    the received data.
+    purpose:    receive ALL incoming data from the socket without losing anything.
+"""
 def recv_all(sock, n):
     # Helper function to recv n bytes or return None if EOF is hit
     data = ''
@@ -187,15 +219,11 @@ def recv_all(sock, n):
     return data
 
 
-
-
-
-
 """
-    FUNCTION:   establish_command_connection()
+    FUNCTION:   create_connection()
     receives:   the remote_host and port to connect to for sending ftp commands.
-    returns:    the active command_socket.
-    purpose:    create a command_socket and establish the connection w/ the server.
+    returns:    the active socket.
+    purpose:    create a socket and establish the connection w/ the server.
 """
 def create_connection(remote_host, port):
     # initialize the client socket
