@@ -49,9 +49,15 @@ using std::string;
 void signal_handler(int signum);
 int create_socket(int port);
 void ftp_session(int port, int server_socket);
-char * _get_command(int command_socket, int buffer_size);
-char * _recv_all(int command_socket);
-char ** _list_dir();
+char * get_command(int command_socket, int buffer_size);
+
+void send_msg(int sock, char * msg);
+int sendall(int sock, char * buf, int len);
+int send_packet_length(int sock, unsigned int * packet_length);
+char * recv_all(int command_socket);
+
+char ** list_dir();
+
 
 
 
@@ -128,12 +134,6 @@ int create_socket(int port){
 
 }
 
-
-
-
-
-
-
 /**
  * FUNCTION:    ftp_session()
  * receives:    the listening port and the active server_socket
@@ -181,13 +181,13 @@ void ftp_session(int port, int server_socket){
         cout << "Command socket connected with " << client_IP << " on port #" << port << "..." << endl;
 
         // Get the commands from the client.
-        command_recv = _recv_all(command_socket);
+        command_recv = recv_all(command_socket);
 
         if(strcmp(command_recv, "-g") == 0){
-            file_name = _recv_all(command_socket);
+            file_name = recv_all(command_socket);
         }
 
-        data_port_string = _recv_all(command_socket);
+        data_port_string = recv_all(command_socket);
         data_port = atoi(data_port_string);
 
 
@@ -211,23 +211,18 @@ void ftp_session(int port, int server_socket){
         }
         cout << "Data socket connected with " << client_IP << "on port #" << data_port << "..." << endl;
 
-
-
-        /*
-         * DATA TRANSMISSION: Based on the user command, transfer either directory contents, or the file
-         */
+        // DATA TRANSMISSION: Based on the user command, transfer either directory contents, or the file //
         cout << endl << "DATA TRANSMISSION:" << endl;
+
+        // we will always need to get the directory contents //
+        dir_contents = list_dir();
+
         if(strcmp(command_recv, "-l") == 0){
             cout << client_IP << " requested directory contents..." << endl;
-            dir_contents = _list_dir();
-
             cout << "Directory Contents:" << endl;
             for(int i = 0; dir_contents[i] != NULL; i += 1){
                 cout << dir_contents[i] << endl;
             }
-
-
-
             cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
         }
         else if(strcmp(command_recv, "-g") == 0){
@@ -248,6 +243,100 @@ void ftp_session(int port, int server_socket){
 
 
 
+char * recv_all(int command_socket){
+    char * msg_recv;
+    int total = 0;                      // Bytes received
+    int n = 0;
+    unsigned short packet_length;       // Number of bytes in packet
+    unsigned short data_length;         // Number of bytes in encapsulated data
+
+    // Receive the packet length.
+    n = recv(command_socket, &packet_length, 2, 0);
+    packet_length = ntohs(packet_length);
+    //printf("Packet length: %d\n", packet_length);
+
+    data_length = packet_length - sizeof(packet_length);
+    //printf("Data length: %d\n", data_length);
+
+    // allocate for the incoming message
+    msg_recv = (char *)malloc(data_length * sizeof(char));
+
+    // loop until all data received
+    while(total < data_length){
+        n = recv(command_socket, msg_recv + total, (data_length - total), 0);
+        total += n;
+    }
+    msg_recv[data_length] = '\0';
+
+    return msg_recv;
+}
+
+
+
+void send_msg(int sock, char * msg){
+    // Prefix each message with a 4-byte length (network byte order)
+
+    unsigned int packet_length;
+    int len = strlen(msg);
+
+    //cout << "Size of packet length: " << sizeof(packet_length) << endl;
+    //cout << "Msg length: " << len << endl;
+
+    // Pack the data!
+    packet_length = htons(sizeof(packet_length) + len);
+
+    //cout << "Packet length: " << packet_length << endl;
+    if(send_packet_length(sock, &packet_length) == -1){
+        perror("send_packet_length failed\n");
+        exit(1);
+    }
+
+    sendall(sock, msg, len);
+
+}
+
+
+int send_packet_length(int sock, unsigned int * packet_length){
+    int total = 0;
+    int bytesleft = 4;
+    int n;
+
+    while(total < 4){
+        n = send(sock, packet_length + total, bytesleft, 0);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+    //cout << "Bytes sent: " << total << endl;
+
+    return n==-1?-1:0; // return -1 on failure, 0 on success
+
+}
+
+
+
+int sendall(int sock, char * buf, int len){
+
+    int total = 0;        // how many bytes we've sent
+    int bytesleft = len; // how many we have left to send
+    int n;
+
+    while(total < len) {
+        n = send(sock, buf + total, bytesleft, 0);
+        if (n == -1) { break; }
+        total += n;
+        bytesleft -= n;
+    }
+
+    len = total; // return number actually sent here
+    cout << "Bytes sent: " << len << endl;
+
+    return n==-1?-1:0; // return -1 on failure, 0 on success
+}
+
+
+
+
 /**
  * FUNCTION:    _list_dir()
  * receives:    nothin.
@@ -255,7 +344,7 @@ void ftp_session(int port, int server_socket){
  * purpose:     an array of strings of the directory contents.
  * referenced from: http://stackoverflow.com/a/612176/4316660 and http://www.gnu.org/software/libc/manual/html_node/Directory-Entries.html
  **/
-char ** _list_dir(){
+char ** list_dir(){
 
     char ** dir_contents = NULL;
     int num_files = 0;
@@ -298,39 +387,12 @@ char ** _list_dir(){
 
 
 /**
- * FUNCTION:    _recv_all()
- * receives:    the command_socket
- * returns:     the received message
- * purpose:     read from a socket
- **/
-char * _recv_all(int command_socket){
-    char * msg_recv = (char *)malloc((100 + 1) * sizeof(char));
-    int n = 0;
-    unsigned short packet_length;       // Number of bytes in packet
-    unsigned short data_length;         // Number of bytes in encapsulated data
-
-    // Receive the packet length.
-    n = recv(command_socket, &packet_length, 2, 0);
-    packet_length = ntohs(packet_length);
-
-    data_length = packet_length - sizeof(packet_length);
-    //printf("%d\n", data_length);
-
-    n = recv(command_socket, msg_recv, data_length, 0);
-    msg_recv[packet_length - 2] = '\0';
-
-    return msg_recv;
-}
-
-
-
-/**
  * FUNCTION:    _get_command()
  * receives:    the command_socket
  * returns:     nothin.
  * purpose:     read a command sent from the client and respond appropriately
  **/
-char * _get_command(int command_socket, int buffer_size){
+char * get_command(int command_socket, int buffer_size){
 
     int bytes_received = 0;
 

@@ -11,23 +11,27 @@
 """
 
 """
-    NOTE: my primary references for the client were http://www.linuxhowtos.org/C_C++/socket.htm and https://docs.python.org/2/library/socket.html.
+    NOTE: my primary references for the client were http://www.linuxhowtos.org/C_C++/socket.htm, https://docs.python.org/2/library/socket.html, and Beej's Guide.
 """
 
 
 """ IMPORTS """
 import sys
 import signal
-from socket import (            # Sockets API
+import socket
+
+from socket import (
     socket,
     gethostname,
     gethostbyname,
     AF_INET,
     SOCK_STREAM,
     SOL_SOCKET,
-    SO_REUSEADDR
+    SO_REUSEADDR,
+    ntohs,
+    htons
 )
-
+import struct
 from struct import pack, unpack # Structured binary data
 """         """
 
@@ -70,23 +74,23 @@ def main():
                 3) send the data port that the client will use for all data transfers
     """
 
-    _send_msg(command_msg, command_socket)
+    send_msg(command_msg, command_socket)
 
     if command_msg == "-g":
-        _send_msg(file_name, command_socket)
+        send_msg(file_name, command_socket)
 
-    _send_msg(str(data_port), command_socket)
+    send_msg(str(data_port), command_socket)
 
 
     print "Creating data connection..."
     data_socket = create_connection(remote_host, data_port)
     print 'Data socket connected to', remote_host, 'on port #', data_port, '...'
 
-    # run function to either get directory contents or get the requested file 
+    # run function to either get directory contents or get the requested file
     if command_msg == "-l":
-        _get_directory()
+        get_directory()
     elif command_msg == "-g":
-        _get_file()
+        get_file(file_name)
 
 
     data_socket.close()
@@ -94,10 +98,12 @@ def main():
 
 
 
-def _get_directory():
+
+
+def get_directory():
     return
 
-def _get_file(file_name):
+def get_file(file_name):
     return
 
 
@@ -110,7 +116,7 @@ def create_socket(port):
     return new_socket
 
 
-def _send_msg(msg_send, command_socket):
+def send_msg(msg_send, command_socket):
 
     # packet_length serves as a "header" to tell the receipient how big of a packet they are receiving
     packet_length = 2 + len(msg_send)
@@ -120,6 +126,31 @@ def _send_msg(msg_send, command_socket):
     packet += msg_send
 
     command_socket.sendall(packet)
+
+
+def recv_msg(sock):
+    # Read message length and unpack it into an integer
+    raw_msglen = recvall(sock, 4)
+    if not raw_msglen:
+        return None
+    msglen = struct.unpack('=I', raw_msglen)[0]
+    msglen = ntohs(msglen)
+    #Read the message data
+    return recv_all(sock, (msglen - 4))
+
+def recv_all(sock, n):
+    # Helper function to recv n bytes or return None if EOF is hit
+    data = ''
+    while len(data) < n:
+        packet = sock.recv(n - len(data))
+        if not packet:
+            return None
+        data += packet
+    return data
+
+
+
+
 
 
 """
