@@ -88,11 +88,13 @@ def main():
 
     # run function to either get directory contents or get the requested file
     if command_msg == "-l":
-        get_directory()
+        get_directory(data_socket)
+
     elif command_msg == "-g":
         get_file(file_name)
 
 
+    print
     data_socket.close()
     command_socket.close()
 
@@ -100,8 +102,13 @@ def main():
 
 
 
-def get_directory():
-    return
+def get_directory(data_socket):
+    num_files = recv_msg(data_socket)
+    
+    for i in range(0, int(num_files)):
+        next_file = recv_msg(data_socket)
+        print next_file
+
 
 def get_file(file_name):
     return
@@ -130,7 +137,7 @@ def send_msg(msg_send, command_socket):
 
 def recv_msg(sock):
     # Read message length and unpack it into an integer
-    raw_msglen = recvall(sock, 4)
+    raw_msglen = recv_all(sock, 4)
     if not raw_msglen:
         return None
     msglen = struct.unpack('=I', raw_msglen)[0]

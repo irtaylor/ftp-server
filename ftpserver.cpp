@@ -24,7 +24,6 @@ using std::cin;
 using std::endl;
 using std::cout;
 
-#include <string.h>
 #include <string>
 using std::string;
 
@@ -37,6 +36,9 @@ using std::string;
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 
 
@@ -57,6 +59,7 @@ int send_packet_length(int sock, unsigned int * packet_length);
 char * recv_all(int command_socket);
 
 char ** list_dir();
+void send_dir(int data_socket, char ** dir_contents);
 
 
 
@@ -219,11 +222,9 @@ void ftp_session(int port, int server_socket){
 
         if(strcmp(command_recv, "-l") == 0){
             cout << client_IP << " requested directory contents..." << endl;
-            cout << "Directory Contents:" << endl;
-            for(int i = 0; dir_contents[i] != NULL; i += 1){
-                cout << dir_contents[i] << endl;
-            }
             cout << "Sending directory to " << client_IP << ":" << data_port << "..." << endl;
+            send_dir(data_socket, dir_contents);
+
         }
         else if(strcmp(command_recv, "-g") == 0){
             cout << client_IP << " requested file " << file_name << "..." << endl;
@@ -241,7 +242,23 @@ void ftp_session(int port, int server_socket){
     }
 }
 
+void send_dir(int data_socket, char ** dir_contents){
+    int num_files = 0;
+    char num_files_string[100];
 
+    for(int i = 0; dir_contents[i] != NULL; i += 1){
+        num_files += 1;
+    }
+    sprintf(num_files_string,"%d",num_files);
+    cout << "Number of files to send: " << num_files_string << endl;
+
+    // inform the client of the number of incoming files first! 
+    send_msg(data_socket, num_files_string);
+
+    for(int i = 0; dir_contents[i] != NULL; i += 1){
+        send_msg(data_socket, dir_contents[i]);
+    }
+}
 
 char * recv_all(int command_socket){
     char * msg_recv;
@@ -421,16 +438,6 @@ char * get_command(int command_socket, int buffer_size){
 
 }
 
-/**
- * FUNCTION:    _show_directory()
- * receives:    nothin...
- * returns:     nothin.
- * purpose:     show the ftp server's directory contents.
- **/
-void _show_directory(){
-    cout << "Sending directory to client..." << endl;
-
-}
 
 /**
  * FUNCTION:    signal_handler()
